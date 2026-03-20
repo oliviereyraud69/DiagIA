@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Readiness Diagnostic – ASI</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  :root {
+    --primary: #6C3BFF;
+    --primary-dark: #4f28cc;
+    --secondary: #00C9A7;
+    --accent: #FF6B6B;
+    --bg: #0E0E1A;
+    --card: #16162A;
+    --card2: #1E1E35;
+    --text: #E8E8F0;
+    --muted: #8888AA;
+    --border: #2A2A45;
+    --success: #00C9A7;
+    --warn: #FFB347;
+    --danger: #FF6B6B;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  .hero {
+    background: linear-gradient(135deg, #1a0a3d 0%, #0E0E1A 60%, #0a2030 100%);
+    padding: 60px 24px 40px;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 30% 50%, rgba(108,59,255,0.15) 0%, transparent 60%),
+                radial-gradient(ellipse at 70% 30%, rgba(0,201,167,0.08) 0%, transparent 50%);
+  }
+  .hero-badge {
+    display: inline-block;
+    background: rgba(108,59,255,0.2);
+    border: 1px solid rgba(108,59,255,0.5);
+    color: #A78BFF;
+    font-size: 12px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 2px;
+    padding: 6px 16px; border-radius: 20px; margin-bottom: 20px;
+    position: relative;
+  }
+  .hero h1 { font-size: clamp(28px, 5vw, 52px); font-weight: 800; line-height: 1.15; position: relative; }
+  .hero h1 span { background: linear-gradient(90deg, var(--primary), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .hero p { color: var(--muted); font-size: 16px; max-width: 580px; margin: 16px auto 0; line-height: 1.7; position: relative; }
+  .hero-meta { display: flex; gap: 24px; justify-content: center; margin-top: 24px; flex-wrap: wrap; position: relative; }
+  .hero-meta span { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+
+  .progress-bar-wrap { background: var(--card); border-bottom: 1px solid var(--border); }
+  .progress-steps { display: flex; max-width: 900px; margin: 0 auto; }
+  .step-tab {
+    flex: 1; padding: 14px 8px; text-align: center; font-size: 11px; font-weight: 600;
+    color: var(--muted); border-bottom: 3px solid transparent; cursor: default;
+    letter-spacing: 0.5px; text-transform: uppercase; transition: all 0.3s;
+  }
+  .step-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+  .step-tab.done { color: var(--secondary); border-bottom-color: var(--secondary); }
+
+  .container { max-width: 900px; margin: 0 auto; padding: 32px 20px 80px; }
+
+  /* LANDING */
+  .landing-card {
+    background: linear-gradient(135deg, var(--card) 0%, #1a1a30 100%);
+    border: 1px solid rgba(108,59,255,0.3);
+    border-radius: 20px;
+    padding: 52px 48px;
+    text-align: center;
+    margin-bottom: 24px;
+  }
+  .landing-card h2 { font-size: 28px; font-weight: 800; margin-bottom: 12px; }
+  .landing-card p { color: var(--muted); font-size: 16px; max-width: 500px; margin: 0 auto 32px; line-height: 1.7; }
+  .landing-features { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 36px; }
+  .landing-feat {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 16px;
+    text-align: center;
+  }
+  .landing-feat .feat-icon { font-size: 28px; margin-bottom: 8px; }
+  .landing-feat .feat-title { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+  .landing-feat .feat-desc { font-size: 12px; color: var(--muted); }
+
+  /* QUESTION */
+  .section-header { margin-bottom: 24px; }
+  .section-header h2 { font-size: 22px; font-weight: 700; }
+  .section-header p { color: var(--muted); font-size: 14px; margin-top: 4px; }
+  .pilier-badge {
+    display: inline-block;
+    background: rgba(108,59,255,0.15);
+    border: 1px solid rgba(108,59,255,0.3);
+    color: #A78BFF;
+    font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 1px;
+    padding: 4px 12px; border-radius: 20px; margin-bottom: 12px;
+  }
+  .question-card {
+    background: var(--card2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px; margin-bottom: 16px;
+    transition: border-color 0.2s;
+  }
+  .question-card:hover { border-color: rgba(108,59,255,0.3); }
+  .question-text { font-size: 15px; font-weight: 500; margin-bottom: 6px; line-height: 1.5; }
+  .question-hint { font-size: 13px; color: var(--muted); margin-bottom: 16px; line-height: 1.5; }
+  .score-slider-wrap { display: flex; align-items: center; gap: 12px; }
+  .score-slider {
+    -webkit-appearance: none; flex: 1; height: 6px; border-radius: 3px;
+    background: linear-gradient(to right, var(--primary) 0%, var(--primary) var(--val, 50%), var(--border) var(--val, 50%));
+    outline: none; cursor: pointer;
+  }
+  .score-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%;
+    background: var(--primary); box-shadow: 0 0 0 4px rgba(108,59,255,0.25);
+    cursor: pointer; transition: transform 0.15s;
+  }
+  .score-slider::-webkit-slider-thumb:hover { transform: scale(1.2); }
+  .score-badge { min-width: 36px; text-align: center; font-size: 18px; font-weight: 800; color: var(--primary); }
+  .score-labels { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 6px; }
+  .score-label-text { font-size: 12px; color: var(--secondary); margin-top: 4px; font-style: italic; }
+
+  /* BUTTONS */
+  .btn-primary {
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: white; border: none; padding: 14px 32px; border-radius: 10px;
+    font-size: 16px; font-weight: 700; cursor: pointer; transition: all 0.2s;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(108,59,255,0.4); }
+  .btn-secondary {
+    background: transparent; color: var(--muted); border: 1px solid var(--border);
+    padding: 12px 24px; border-radius: 10px; font-size: 15px; cursor: pointer; transition: all 0.2s;
+  }
+  .btn-secondary:hover { border-color: var(--primary); color: var(--text); }
+  .nav-actions {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--border);
+  }
+
+  /* RESULTS */
+  .result-hero {
+    background: linear-gradient(135deg, var(--card) 0%, #1a1a30 100%);
+    border: 1px solid rgba(108,59,255,0.3);
+    border-radius: 16px; padding: 40px; text-align: center; margin-bottom: 32px;
+  }
+  .global-score-ring {
+    width: 140px; height: 140px; border-radius: 50%; margin: 0 auto 20px;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    font-size: 40px; font-weight: 900; position: relative;
+    border: 6px solid rgba(108,59,255,0.3);
+  }
+  .maturity-label { font-size: 22px; font-weight: 800; margin-bottom: 8px; }
+  .maturity-desc { color: var(--muted); font-size: 15px; max-width: 500px; margin: 0 auto 24px; }
+
+  .pillars-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-bottom: 32px; }
+  .pillar-card {
+    background: var(--card2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px; position: relative; overflow: hidden;
+  }
+  .pillar-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, var(--primary), var(--secondary));
+  }
+  .pillar-name { font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+  .pillar-score { font-size: 32px; font-weight: 900; margin-bottom: 4px; }
+  .pillar-score span { font-size: 16px; font-weight: 400; color: var(--muted); }
+  .pillar-bar-bg { height: 6px; background: var(--border); border-radius: 3px; margin-top: 10px; }
+  .pillar-bar-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--primary), var(--secondary)); transition: width 1s ease; }
+
+  .reco-card {
+    background: var(--card2); border: 1px solid var(--border); border-left: 4px solid;
+    border-radius: 12px; padding: 24px; margin-bottom: 16px;
+  }
+  .reco-card.prio-high { border-left-color: var(--danger); }
+  .reco-card.prio-med { border-left-color: var(--warn); }
+  .reco-card.prio-low { border-left-color: var(--success); }
+  .reco-header { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 12px; }
+  .reco-prio-badge { padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; white-space: nowrap; margin-top: 2px; }
+  .prio-high .reco-prio-badge { background: rgba(255,107,107,0.15); color: var(--danger); }
+  .prio-med .reco-prio-badge { background: rgba(255,179,71,0.15); color: var(--warn); }
+  .prio-low .reco-prio-badge { background: rgba(0,201,167,0.15); color: var(--success); }
+  .reco-title { font-size: 16px; font-weight: 700; }
+  .reco-why { color: var(--muted); font-size: 14px; margin-bottom: 12px; line-height: 1.6; }
+  .reco-actions li { margin-left: 16px; font-size: 14px; line-height: 1.8; }
+
+  .chart-card {
+    background: var(--card2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 24px; margin-bottom: 32px;
+  }
+  .chart-card h3 { font-size: 18px; font-weight: 700; margin-bottom: 20px; }
+
+  /* ===== CTA LEAD FORM ===== */
+  .cta-section {
+    background: linear-gradient(135deg, rgba(108,59,255,0.12) 0%, rgba(0,201,167,0.08) 100%);
+    border: 1px solid rgba(108,59,255,0.35);
+    border-radius: 20px;
+    padding: 48px 40px;
+    margin-top: 40px;
+    position: relative;
+    overflow: hidden;
+  }
+  .cta-section::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 80% 20%, rgba(0,201,167,0.07) 0%, transparent 60%);
+  }
+  .cta-top { display: flex; gap: 40px; align-items: flex-start; flex-wrap: wrap; position: relative; }
+  .cta-left { flex: 1; min-width: 260px; }
+  .cta-left h3 { font-size: 26px; font-weight: 800; margin-bottom: 12px; line-height: 1.3; }
+  .cta-left h3 span { background: linear-gradient(90deg, var(--primary), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .cta-left p { color: var(--muted); font-size: 15px; line-height: 1.7; margin-bottom: 20px; }
+  .cta-benefits { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+  .cta-benefits li { font-size: 14px; display: flex; align-items: center; gap: 10px; }
+  .cta-benefits li::before { content: '✓'; color: var(--secondary); font-weight: 800; font-size: 16px; }
+
+  .cta-right { flex: 1; min-width: 280px; position: relative; }
+  .cta-form-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+  }
+  .cta-form-card h4 { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+  .cta-form-card .sub { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
+  .form-group label { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .form-group input, .form-group select {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 11px 14px; color: var(--text);
+    font-size: 15px; transition: border-color 0.2s; outline: none;
+  }
+  .form-group input:focus, .form-group select:focus { border-color: var(--primary); }
+  .form-group select option { background: var(--bg); }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .btn-cta {
+    width: 100%;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: white; border: none; padding: 16px; border-radius: 12px;
+    font-size: 16px; font-weight: 700; cursor: pointer; transition: all 0.2s;
+    margin-top: 6px;
+  }
+  .btn-cta:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(108,59,255,0.5); }
+  .form-mention { font-size: 11px; color: var(--muted); text-align: center; margin-top: 10px; }
+
+  /* SUCCESS STATE */
+  .cta-success {
+    background: rgba(0,201,167,0.1);
+    border: 1px solid rgba(0,201,167,0.3);
+    border-radius: 16px;
+    padding: 32px;
+    text-align: center;
+    display: none;
+  }
+  .cta-success .success-icon { font-size: 52px; margin-bottom: 16px; }
+  .cta-success h4 { font-size: 22px; font-weight: 800; color: var(--secondary); margin-bottom: 8px; }
+  .cta-success p { color: var(--muted); font-size: 15px; line-height: 1.7; }
+
+  .export-bar { display: flex; gap: 12px; justify-content: flex-end; margin-bottom: 24px; flex-wrap: wrap; }
+
+  .hidden { display: none !important; }
+  .toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--secondary); color: #000;
+    padding: 14px 20px; border-radius: 10px;
+    font-weight: 600; font-size: 14px; z-index: 1000;
+    transform: translateY(80px); opacity: 0;
+    transition: all 0.4s cubic-bezier(.175,.885,.32,1.275);
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+
+  @media (max-width: 640px) {
+    .landing-card { padding: 32px 20px; }
+    .progress-steps .step-tab { font-size: 10px; padding: 12px 4px; }
+    .cta-section { padding: 32px 20px; }
+    .form-row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-badge">🤖 AI Readiness Diagnostic</div>
+  <h1>Évaluez la maturité IA<br><span>de votre organisation</span></h1>
+  <p>Un diagnostic en 25 questions pour savoir où vous en êtes, et comment progresser.</p>
+  <div class="hero-meta">
+    <span>⏱️ 5 minutes</span>
+    <span>📊 Résultats instantanés</span>
+    <span>🎯 Recommandations personnalisées</span>
+    <span>🔒 100% confidentiel</span>
+  </div>
+</div>
+
+<div class="progress-bar-wrap">
+  <div class="progress-steps">
+    <div class="step-tab active" id="tab-0">Accueil</div>
+    <div class="step-tab" id="tab-1">Vision</div>
+    <div class="step-tab" id="tab-2">Data</div>
+    <div class="step-tab" id="tab-3">Usage</div>
+    <div class="step-tab" id="tab-4">Engineering</div>
+    <div class="step-tab" id="tab-5">Platform</div>
+    <div class="step-tab" id="tab-6">Résultats</div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- STEP 0: LANDING -->
+  <div id="step-0">
+    <div class="landing-card">
+      <h2>Où en est votre organisation avec l'IA ?</h2>
+      <p>Ce diagnostic évalue votre maturité sur 5 piliers clés. Aucune information personnelle requise pour commencer.</p>
+      <div class="landing-features">
+        <div class="landing-feat">
+          <div class="feat-icon">🏛️</div>
+          <div class="feat-title">Vision & Gouvernance</div>
+          <div class="feat-desc">Stratégie, cadre, sponsorship</div>
+        </div>
+        <div class="landing-feat">
+          <div class="feat-icon">🗄️</div>
+          <div class="feat-title">Data & Knowledge</div>
+          <div class="feat-desc">Qualité, accès, gouvernance</div>
+        </div>
+        <div class="landing-feat">
+          <div class="feat-icon">⚡</div>
+          <div class="feat-title">Usage & Adoption</div>
+          <div class="feat-desc">Cas d'usage, compétences</div>
+        </div>
+        <div class="landing-feat">
+          <div class="feat-icon">⚙️</div>
+          <div class="feat-title">Engineering</div>
+          <div class="feat-desc">Delivery, stabilité, rollback</div>
+        </div>
+        <div class="landing-feat">
+          <div class="feat-icon">🚀</div>
+          <div class="feat-title">Platform & Scaling</div>
+          <div class="feat-desc">Industrialisation, self-service</div>
+        </div>
+      </div>
+      <button class="btn-primary" style="font-size:18px;padding:16px 48px" onclick="goToStep(1)">
+        Démarrer le diagnostic →
+      </button>
+    </div>
+  </div>
+
+  <!-- STEPS 1-5 -->
+  <div id="step-1" class="hidden"></div>
+  <div id="step-2" class="hidden"></div>
+  <div id="step-3" class="hidden"></div>
+  <div id="step-4" class="hidden"></div>
+  <div id="step-5" class="hidden"></div>
+
+  <!-- STEP 6: RESULTS -->
+  <div id="step-6" class="hidden">
+    <div class="export-bar">
+      <button class="btn-secondary" onclick="window.print()">🖨️ Imprimer</button>
+      <button class="btn-secondary" onclick="exportCSV()">⬇️ Export CSV</button>
+    </div>
+
+    <div class="result-hero">
+      <div class="global-score-ring" id="score-ring">
+        <div id="global-score-display" style="font-size:42px;font-weight:900;"></div>
+        <div style="font-size:13px;color:var(--muted)">/5</div>
+      </div>
+      <div class="maturity-label" id="maturity-label"></div>
+      <div class="maturity-desc" id="maturity-desc"></div>
+    </div>
+
+    <div class="chart-card">
+      <h3>📡 Radar de maturité IA</h3>
+      <canvas id="radarChart" height="320"></canvas>
+    </div>
+
+    <div class="pillars-grid" id="pillars-grid"></div>
+
+    <div class="section-header">
+      <h2>🎯 Recommandations prioritaires</h2>
+      <p>Actions à fort impact pour progresser rapidement sur vos piliers les plus faibles</p>
+    </div>
+    <div id="recos-container"></div>
+
+    <!-- ===== CTA LEAD GEN ===== -->
+    <div class="cta-section">
+      <div class="cta-top">
+        <div class="cta-left">
+          <h3>Passons à l'étape<br><span>suivante ensemble</span> 🚀</h3>
+          <p>Votre diagnostic révèle des opportunités concrètes. Nos experts sont prêts à vous accompagner pour transformer ces insights en plan d'action réel.</p>
+          <ul class="cta-benefits">
+            <li>Atelier de cadrage gratuit de 2h avec un expert IA</li>
+            <li>Roadmap personnalisée 90 jours sur-mesure</li>
+            <li>Rapport complet envoyé par email</li>
+            <li>Identification des quick wins à fort ROI</li>
+            <li>Benchmarks sectoriels et bonnes pratiques</li>
+          </ul>
+        </div>
+        <div class="cta-right">
+          <div class="cta-form-card" id="cta-form-wrap">
+            <h4>📅 Continuons l'échange</h4>
+            <div class="sub">Aucun engagement · Réponse sous 24h</div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Prénom *</label>
+                <input type="text" id="f-prenom" placeholder="Jean">
+              </div>
+              <div class="form-group">
+                <label>Nom *</label>
+                <input type="text" id="f-nom" placeholder="Dupont">
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Email professionnel *</label>
+              <input type="email" id="f-email" placeholder="jean@entreprise.com">
+            </div>
+            <div class="form-group">
+              <label>Société *</label>
+              <input type="text" id="f-societe" placeholder="Nom de votre entreprise">
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Téléphone</label>
+                <input type="tel" id="f-tel" placeholder="+33 6...">
+              </div>
+              <div class="form-group">
+                <label>Votre rôle</label>
+                <select id="f-role">
+                  <option value="">--</option>
+                  <option>COMEX / Dirigeant</option>
+                  <option>DSI / CTO</option>
+                  <option>CDO / Data Officer</option>
+                  <option>Directeur Métier</option>
+                  <option>Chef de projet</option>
+                  <option>Architecte / Tech</option>
+                  <option>Consultant</option>
+                  <option>Autre</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Secteur</label>
+              <select id="f-secteur">
+                <option value="">-- Sélectionnez --</option>
+                <option>Assurance</option>
+                <option>Banque / Finance</option>
+                <option>Services IT / ESN</option>
+                <option>Industrie</option>
+                <option>Retail / Distribution</option>
+                <option>Santé</option>
+                <option>Énergie / Utilities</option>
+                <option>Transport / Logistique</option>
+                <option>Télécoms / Médias</option>
+                <option>Service public</option>
+                <option>Autre</option>
+              </select>
+            </div>
+            <button class="btn-cta" onclick="submitLead()">
+              🤝 Oui, je veux être contacté(e)
+            </button>
+            <div class="form-mention">En soumettant ce formulaire, vous acceptez d'être recontacté(e) par notre équipe.</div>
+          </div>
+
+          <div class="cta-success" id="cta-success">
+            <div class="success-icon">🎉</div>
+            <h4>Super, c'est noté !</h4>
+            <p>Un expert vous contactera sous <strong>24h</strong> pour planifier votre atelier gratuit.<br><br>
+            En attendant, vous pouvez imprimer ou exporter votre rapport ci-dessus.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const PILLARS = [
+  {
+    id: 1, name: "Vision & Gouvernance", weight: 0.15, icon: "🏛️",
+    questions: [
+      { text: "L'organisation dispose d'une stratégie IA explicite, alignée avec ses priorités business et traduite en objectifs concrets à 12 mois.", hint: "1 = aucune vision formalisée · 3 = ambitions évoquées mais non traduites · 5 = vision documentée, sponsorisée, reliée aux priorités métier" },
+      { text: "Les collaborateurs savent précisément quels usages de l'IA sont autorisés, interdits ou soumis à conditions.", hint: "1 = flou total · 3 = règles partielles / selon les équipes · 5 = cadre clair, documenté et compris" },
+      { text: "Les risques liés à l'IA (fuite de données, confidentialité, hallucinations, propriété intellectuelle) sont pris en compte avec des garde-fous.", hint: "1 = non traité · 3 = sensibilisation ou règles partielles · 5 = cadre de contrôle et pratiques en place" },
+      { text: "La direction soutient activement l'adoption de l'IA par des arbitrages, de la communication et des moyens.", hint: "1 = pas de sponsor · 3 = sponsor informel · 5 = sponsor exécutif visible et engagé" },
+      { text: "Les rôles et responsabilités autour de l'IA sont clairs (métier, data, sécurité, IT, juridique, pilotage).", hint: "1 = aucun ownership · 3 = responsabilités partielles · 5 = gouvernance claire et connue" }
+    ],
+    reco: { why: "Sans cadre clair, l'adoption reste hésitante ou risquée ; les équipes expérimentent sans règles homogènes.", action: "Clarifier la stratégie, les règles d'usage et l'ownership.", steps: ["Formaliser une AI policy simple", "Nommer un sponsor exécutif", "Définir les rôles et responsabilités", "Choisir 3 cas d'usage prioritaires"] }
+  },
+  {
+    id: 2, name: "Data & Knowledge", weight: 0.30, icon: "🗄️",
+    questions: [
+      { text: "Les données nécessaires aux cas d'usage sont faciles à trouver et à obtenir sans parcours long ni dépendance forte.", hint: "1 = difficile et lent · 3 = accessible avec effort · 5 = accès fluide et documenté" },
+      { text: "Les données utilisées sont suffisamment fiables, complètes et à jour pour être exploitées en IA.", hint: "1 = qualité faible · 3 = qualité variable · 5 = qualité maîtrisée" },
+      { text: "Les données critiques sont peu silotées entre outils, équipes et fonctions.", hint: "1 = silos forts · 3 = fédération partielle · 5 = vue unifiée ou facilement fédérée" },
+      { text: "Des data owners / stewards sont identifiés pour les domaines de données clés.", hint: "1 = aucun owner · 3 = ownership partiel · 5 = ownership clair et actif" },
+      { text: "Lorsqu'une équipe a besoin d'une donnée clé, elle peut l'obtenir rapidement (time-to-data).", hint: "1 = plusieurs jours/semaines · 3 = quelques heures · 5 = moins d'une heure" }
+    ],
+    reco: { why: "Sans données fiables, accessibles et peu silotées, l'IA reste peu crédible et difficile à scaler.", action: "Traiter la donnée comme un actif stratégique.", steps: ["Nommer des data owners par domaine", "Fiabiliser 1–2 domaines de données clés", "Réduire le time-to-data sur les cas d'usage prioritaires", "Documenter les sources et référentiels prioritaires"] }
+  },
+  {
+    id: 3, name: "Usage & Adoption IA", weight: 0.15, icon: "⚡",
+    questions: [
+      { text: "L'IA est effectivement utilisée dans les équipes sur des tâches réelles, au-delà des démonstrations.", hint: "1 = usage rare · 3 = usage occasionnel · 5 = usage régulier et installé" },
+      { text: "Les usages IA sont reliés à des cas d'usage concrets avec un impact attendu sur la performance.", hint: "1 = pas de cas d'usage clair · 3 = quelques POCs · 5 = cas d'usage priorisés et reliés à des objectifs métier" },
+      { text: "Les gains apportés par l'IA sont mesurés ou au moins suivis avec des indicateurs crédibles.", hint: "1 = aucun suivi · 3 = appréciation qualitative · 5 = mesure structurée et partagée" },
+      { text: "Les équipes savent utiliser l'IA de manière pertinente : formulation, vérification, intégration dans les processus.", hint: "1 = faible maturité · 3 = compétence hétérogène · 5 = bonnes pratiques diffusées" },
+      { text: "Les outils IA peuvent exploiter du contexte interne utile (documents, FAQ, référentiels, procédures).", hint: "1 = aucun contexte · 3 = accès partiel · 5 = contexte interne accessible et utile" }
+    ],
+    reco: { why: "Sans cas d'usage concrets ni mesure de valeur, l'IA reste un sujet d'image plus qu'un levier de performance.", action: "Transformer l'adoption en impact business mesurable.", steps: ["Prioriser 2–3 cas d'usage à fort ROI", "Former les équipes aux bonnes pratiques IA", "Définir des KPI de gains par cas d'usage", "Mettre en place un retour d'expérience partagé"] }
+  },
+  {
+    id: 4, name: "Engineering & Delivery", weight: 0.20, icon: "⚙️",
+    questions: [
+      { text: "Les artefacts importants (code, config, scripts, prompts) sont versionnés de manière rigoureuse.", hint: "1 = versioning partiel · 3 = versioning correct mais incomplet · 5 = couverture robuste" },
+      { text: "Les équipes savent découper les changements en petits lots, plus faciles à tester et déployer.", hint: "1 = gros lots · 3 = découpage irrégulier · 5 = petits lots fréquents" },
+      { text: "En cas de problème, il est simple et rapide de revenir à un état stable (rollback).", hint: "1 = rollback difficile · 3 = possible mais coûteux · 5 = rollback rapide et maîtrisé" },
+      { text: "L'augmentation de vitesse liée à l'IA n'entraîne pas de dégradation notable de la qualité ou la sécurité.", hint: "1 = instabilité forte · 3 = stabilité variable · 5 = vitesse maîtrisée" },
+      { text: "L'IA est intégrée de façon utile dans le cycle de delivery sans créer de chaos.", hint: "1 = non intégrée · 3 = usages ponctuels · 5 = intégration utile et cadrée" }
+    ],
+    reco: { why: "Si la vitesse augmente sans garde-fous, l'IA amplifie surtout l'instabilité, le rework et les défauts.", action: "Sécuriser l'accélération générée par l'IA.", steps: ["Renforcer les pratiques de petits lots et code review", "Structurer les processus de rollback", "Versionner systématiquement les prompts et configs IA", "Intégrer l'IA dans les gates de qualité du delivery"] }
+  },
+  {
+    id: 5, name: "Platform & Scaling", weight: 0.20, icon: "🚀",
+    questions: [
+      { text: "L'organisation met à disposition des outils et services facilitant l'usage de l'IA de manière homogène et sécurisée.", hint: "1 = rien de structuré · 3 = briques partielles · 5 = socle clair et utilisé" },
+      { text: "Les cas d'usage IA ne restent pas à l'état de POC : ils peuvent être mis en production et maintenus.", hint: "1 = POCs isolés · 3 = industrialisation partielle · 5 = passage en production maîtrisé" },
+      { text: "Les équipes accèdent facilement aux outils et données nécessaires sans dépendance excessive (self-service).", hint: "1 = forte dépendance · 3 = autonomie partielle · 5 = self-service crédible" },
+      { text: "Les outils IA sont intégrés au SI et aux workflows existants plutôt que superposés.", hint: "1 = outils isolés · 3 = intégrations partielles · 5 = intégration cohérente" },
+      { text: "Les solutions IA peuvent être répliquées à plus grande échelle sans explosion de complexité.", hint: "1 = non scalable · 3 = extension limitée · 5 = scaling possible et gouverné" }
+    ],
+    reco: { why: "Sans socle commun, les cas d'usage restent des POCs isolés et peinent à passer à l'échelle.", action: "Construire un socle d'industrialisation.", steps: ["Mettre en place des briques self-service partagées", "Intégrer les outils IA au SI existant", "Préparer une roadmap de plateforme 6–12 mois", "Définir les critères de passage en production"] }
+  }
+];
+
+const SCORE_LABELS = ["","Très faible","Faible","Intermédiaire","Solide","Avancé"];
+const MATURITY = [
+  { min:0,   max:1.5, label:"🌱 Démarrage",    color:"#FF6B6B", desc:"Votre organisation commence tout juste à structurer son approche IA. Des fondations solides sont à poser avant d'aller plus loin." },
+  { min:1.5, max:2.5, label:"🔧 Construction",  color:"#FFB347", desc:"Des initiatives existent mais manquent de cohérence et de gouvernance. Il est temps de structurer et prioriser." },
+  { min:2.5, max:3.5, label:"📈 Progression",   color:"#6C3BFF", desc:"Votre maturité IA est en bonne voie. Certains piliers sont solides, d'autres nécessitent encore un effort ciblé." },
+  { min:3.5, max:4.5, label:"💡 Optimisation",  color:"#00C9A7", desc:"Votre organisation a de solides bases IA. L'enjeu est maintenant de scaler et d'optimiser la valeur créée." },
+  { min:4.5, max:5.1, label:"🏆 Leader IA",     color:"#FFD700", desc:"Félicitations ! Votre organisation fait partie des leaders IA. Continuez à innover et à diffuser vos bonnes pratiques." }
+];
+
+let currentStep = 0;
+let scores = {};
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+function updateTabs() {
+  for (let i = 0; i <= 6; i++) {
+    const tab = document.getElementById('tab-' + i);
+    if (!tab) continue;
+    tab.classList.remove('active','done');
+    if (i < currentStep) tab.classList.add('done');
+    else if (i === currentStep) tab.classList.add('active');
+  }
+}
+
+function buildPillarStep(pillar) {
+  const el = document.getElementById('step-' + pillar.id);
+  let html = `
+    <div class="section-header">
+      <div class="pilier-badge">${pillar.icon} Pilier ${pillar.id}/5</div>
+      <h2>${pillar.name}</h2>
+      <p>Notez chaque dimension de 1 à 5 en vous appuyant sur des faits observables</p>
+    </div>`;
+  pillar.questions.forEach((q, i) => {
+    const sid = `score-p${pillar.id}-q${i}`;
+    const bdg = `badge-p${pillar.id}-q${i}`;
+    const lbl = `label-p${pillar.id}-q${i}`;
+    html += `
+    <div class="question-card">
+      <div class="question-text">${i+1}. ${q.text}</div>
+      <div class="question-hint">${q.hint}</div>
+      <div class="score-slider-wrap">
+        <input type="range" class="score-slider" id="${sid}" min="1" max="5" value="3" step="1"
+          oninput="updateScore('${sid}','${bdg}','${lbl}')" style="--val:50%">
+        <div class="score-badge" id="${bdg}">3</div>
+      </div>
+      <div class="score-labels"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span></div>
+      <div class="score-label-text" id="${lbl}">Intermédiaire – base crédible mais encore incomplète</div>
+    </div>`;
+  });
+  html += `
+    <div class="nav-actions">
+      <button class="btn-secondary" onclick="goToStep(${pillar.id - 1})">← Précédent</button>
+      <button class="btn-primary" onclick="saveAndNext(${pillar.id})">${pillar.id < 5 ? 'Suivant →' : 'Voir mes résultats 🎯'}</button>
+    </div>`;
+  el.innerHTML = html;
+}
+
+function updateScore(sid, bdg, lbl) {
+  const val = parseInt(document.getElementById(sid).value);
+  document.getElementById(bdg).textContent = val;
+  document.getElementById(lbl).textContent = SCORE_LABELS[val];
+  const pct = ((val-1)/4*100) + '%';
+  document.getElementById(sid).style.setProperty('--val', pct);
+  const colors = ['','#FF6B6B','#FFB347','#6C3BFF','#00C9A7','#FFD700'];
+  document.getElementById(bdg).style.color = colors[val];
+}
+
+function saveAndNext(pillarId) {
+  scores[pillarId] = PILLARS[pillarId-1].questions.map((_,i) =>
+    parseInt(document.getElementById(`score-p${pillarId}-q${i}`).value));
+  if (pillarId < 5) goToStep(pillarId + 1);
+  else showResults();
+}
+
+function goToStep(n) {
+  document.getElementById('step-' + currentStep).classList.add('hidden');
+  currentStep = n;
+  if (n >= 1 && n <= 5) buildPillarStep(PILLARS[n-1]);
+  document.getElementById('step-' + n).classList.remove('hidden');
+  updateTabs();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function getPillarScore(id) {
+  const s = scores[id];
+  if (!s || !s.length) return 3;
+  return s.reduce((a,b) => a+b, 0) / s.length;
+}
+
+function getGlobalScore() {
+  return PILLARS.reduce((acc, p) => acc + getPillarScore(p.id) * p.weight, 0);
+}
+
+function showResults() {
+  PILLARS.forEach(p => { if (!scores[p.id]) scores[p.id] = [3,3,3,3,3]; });
+  document.getElementById('step-5').classList.add('hidden');
+  currentStep = 6;
+  document.getElementById('step-6').classList.remove('hidden');
+  updateTabs();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  const global = getGlobalScore();
+  const mat = MATURITY.find(m => global >= m.min && global < m.max) || MATURITY[MATURITY.length-1];
+
+  document.getElementById('global-score-display').textContent = global.toFixed(1);
+  document.getElementById('global-score-display').style.color = mat.color;
+  document.getElementById('maturity-label').textContent = mat.label;
+  document.getElementById('maturity-label').style.color = mat.color;
+  document.getElementById('maturity-desc').textContent = mat.desc;
+
+  document.getElementById('pillars-grid').innerHTML = PILLARS.map(p => {
+    const s = getPillarScore(p.id);
+    const m = MATURITY.find(m => s >= m.min && s < m.max) || MATURITY[MATURITY.length-1];
+    return `<div class="pillar-card">
+      <div class="pillar-name">${p.icon} ${p.name}</div>
+      <div class="pillar-score" style="color:${m.color}">${s.toFixed(1)}<span>/5</span></div>
+      <div style="font-size:12px;color:${m.color};margin-bottom:6px">${m.label}</div>
+      <div class="pillar-bar-bg"><div class="pillar-bar-fill" style="width:${(s/5*100).toFixed(0)}%;background:${m.color}"></div></div>
+      <div style="font-size:12px;color:var(--muted);margin-top:6px">Poids : ${(p.weight*100).toFixed(0)}%</div>
+    </div>`;
+  }).join('');
+
+  // Radar
+  const ctx = document.getElementById('radarChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'radar',
+    data: {
+      labels: PILLARS.map(p => p.name.split(' ').slice(0,2).join(' ')),
+      datasets: [
+        { label: 'Score actuel', data: PILLARS.map(p => getPillarScore(p.id)), borderColor: '#6C3BFF', backgroundColor: 'rgba(108,59,255,0.2)', borderWidth: 2, pointBackgroundColor: '#6C3BFF', pointRadius: 5 },
+        { label: 'Cible recommandée', data: PILLARS.map(p => Math.min(5, getPillarScore(p.id)+1.5)), borderColor: '#00C9A7', backgroundColor: 'rgba(0,201,167,0.1)', borderWidth: 2, borderDash: [5,5], pointBackgroundColor: '#00C9A7', pointRadius: 5 }
+      ]
+    },
+    options: {
+      scales: { r: { min:0, max:5, ticks:{ stepSize:1, color:'#8888AA', backdropColor:'transparent' }, grid:{ color:'rgba(255,255,255,0.08)' }, angleLines:{ color:'rgba(255,255,255,0.08)' }, pointLabels:{ color:'#E8E8F0', font:{ size:13, weight:'600' } } } },
+      plugins: { legend: { labels: { color:'#E8E8F0', font:{ size:13 } } } }
+    }
+  });
+
+  // Recos
+  const sorted = [...PILLARS].sort((a,b) => getPillarScore(a.id) - getPillarScore(b.id));
+  document.getElementById('recos-container').innerHTML = sorted.map((p, i) => {
+    const s = getPillarScore(p.id);
+    const prioClass = i < 2 ? 'prio-high' : i < 4 ? 'prio-med' : 'prio-low';
+    const prioLabel = i < 2 ? '🔴 Priorité haute' : i < 4 ? '🟡 Priorité moyenne' : '🟢 À consolider';
+    return `<div class="reco-card ${prioClass}">
+      <div class="reco-header">
+        <div style="flex:1"><div class="reco-title">${p.icon} ${p.name} — Score : ${s.toFixed(1)}/5</div></div>
+        <div class="reco-prio-badge">${prioLabel}</div>
+      </div>
+      <div class="reco-why">💡 <strong>Pourquoi agir :</strong> ${p.reco.why}</div>
+      <div class="reco-why">🎯 <strong>Action prioritaire :</strong> ${p.reco.action}</div>
+      <div class="reco-actions"><strong>📋 Actions 90 jours :</strong><ul>${p.reco.steps.map(s=>`<li>${s}</li>`).join('')}</ul></div>
+    </div>`;
+  }).join('');
+}
+
+function submitLead() {
+  const prenom = document.getElementById('f-prenom').value.trim();
+  const nom = document.getElementById('f-nom').value.trim();
+  const email = document.getElementById('f-email').value.trim();
+  const societe = document.getElementById('f-societe').value.trim();
+  if (!prenom || !nom || !email || !societe) {
+    showToast('⚠️ Veuillez remplir les champs obligatoires');
+    return;
+  }
+  if (!email.includes('@')) { showToast('⚠️ Email invalide'); return; }
+
+  // Build lead data with scores
+  const leadData = {
+    prenom, nom, email, societe,
+    tel: document.getElementById('f-tel').value,
+    role: document.getElementById('f-role').value,
+    secteur: document.getElementById('f-secteur').value,
+    scoreGlobal: getGlobalScore().toFixed(2),
+    scores: Object.fromEntries(PILLARS.map(p => [p.name, getPillarScore(p.id).toFixed(2)]))
+  };
+  console.log('LEAD:', JSON.stringify(leadData));
+  // TODO: POST to your CRM / webhook here
+
+  document.getElementById('cta-form-wrap').style.display = 'none';
+  document.getElementById('cta-success').style.display = 'block';
+  showToast('✅ Demande envoyée ! À très bientôt.');
+}
+
+function exportCSV() {
+  let csv = 'Pilier,Score
+';
+  csv += PILLARS.map(p => `${p.name},${getPillarScore(p.id).toFixed(2)}`).join('
+');
+  csv += `
+Score Global,${getGlobalScore().toFixed(2)}`;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
+  a.download = 'AI_Readiness_Diagnostic.csv';
+  a.click();
+  showToast('✅ Export CSV téléchargé !');
+}
+</script>
+</body>
+</html>
